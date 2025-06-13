@@ -6,11 +6,35 @@
   <link rel="stylesheet" href="style/main.css" />
 </head>
 <body>
- <h1>Progress Fantasy</h1>
+  <h1>Progress Fantasy</h1>
 
-<div id="stats"></div>  <!-- For displaying tick updates -->
-<div id="game"></div>   <!-- For job buttons and other UI -->
+  <div id="layout">
+    <!-- Main game content with tabs -->
+    <div id="main-content">
+      <div id="tabs">
+        <button data-tab="jobs" class="tab active">Jobs</button>
+        <button data-tab="items" class="tab">Items</button> <!-- ✅ New Tab -->
+        <button data-tab="settings" class="tab">Settings</button>
+      </div>
 
-<script type="module" src="src/main.js"></script>
+      <div id="tab-content">
+        <div id="tab-jobs" class="tab-pane active"></div>
+        <div id="tab-items" class="tab-pane"></div> <!-- ✅ New Pane -->
+        <div id="tab-settings" class="tab-pane">
+          <button id="save-button">Save Game</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Persistent stats sidebar -->
+    <div id="stats-panel">
+      <h3>Stats</h3>
+      <div id="stats-output">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
