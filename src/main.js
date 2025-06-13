@@ -18,15 +18,19 @@ const tabItems = document.getElementById("tab-items");
 
 
 function switchTab(tabName) {
- document.querySelectorAll(".tab").forEach(button => {
-  button.addEventListener("click", () => {
-    const tabName = button.dataset.tab;
-    switchTab(tabName);
-    if (tabName === "items") renderItems(); // ✅ trigger item redraw
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
   });
-});
 
+  document.querySelectorAll(".tab-pane").forEach(pane => {
+    pane.classList.toggle("active", pane.id === `tab-${tabName}`);
+  });
+
+  // Optional: rerender items or jobs if switching
+  if (tabName === "jobs") renderJobs();
+  if (tabName === "items") renderItems();
 }
+
 
 function renderJobs() {
   tabJobs.innerHTML = "";
@@ -82,12 +86,35 @@ function renderJobs() {
 
 function renderStats() {
   const statsDiv = document.getElementById("stats-output");
+
+  let income = 0;
+  let drain = 0;
+
+  // Get gold income from active job
+  if (player.activeJob) {
+    const job = jobs.find(j => j.id === player.activeJob);
+    if (job) income = job.income;
+  }
+
+  // Get total item drain
+  items.forEach(item => {
+    if (player.items[item.id]) {
+      drain += item.costPerTick;
+    }
+  });
+
+  const net = income - drain;
+
   statsDiv.textContent = `
 Gold: ${player.gold.toFixed(1)}
+Income: ${income.toFixed(2)} / tick
+Drain: ${drain.toFixed(2)} / tick
+Net: ${net.toFixed(2)} / tick
 Active Job: ${player.activeJob || "None"}
 Total Levels: ${Object.values(player.levels).reduce((a, b) => a + b, 0)}
-`;
+  `;
 }
+
 
 function updateXPBars() {
   jobs.forEach(job => {
@@ -119,34 +146,29 @@ function renderItems() {
   tabItems.innerHTML = "";
 
   items.forEach(item => {
-    const level = player.items[item.id] || 0;
-    const canUpgrade = level < item.maxLevel;
-    const goldDrain = item.costPerTick * (level + 1);
+    const row = document.createElement("div");
+    row.className = "item-row";
 
-    const div = document.createElement("div");
-    div.className = "item-upgrade";
-    div.innerHTML = `
-      <strong>${item.name}</strong> (Lvl ${level}/${item.maxLevel})<br>
-      ${canUpgrade ? `Drain: ${goldDrain.toFixed(2)} gold/tick` : `Max level`}<br>
-      Affects: ${item.targets.join(", ")}
-    `;
+    // Item name + cost
+    const label = document.createElement("span");
+    label.textContent = `${item.name} - ${item.costPerTick.toFixed(2)} gold/tick`;
+    label.style.marginRight = "10px";
 
-    if (canUpgrade) {
-      const btn = document.createElement("button");
-      btn.textContent = "Upgrade";
-      btn.onclick = () => {
-        if (player.gold >= goldDrain * 10) {
-          player.gold -= goldDrain * 10;
-          player.items[item.id] = level + 1;
-          renderItems();
-        }
-      };
-      div.appendChild(btn);
-    }
+    // Toggle button
+    const toggle = document.createElement("button");
+    toggle.textContent = player.items[item.id] ? "Disable" : "Enable";
+    toggle.onclick = () => {
+      player.items[item.id] = !player.items[item.id];
+      renderItems(); // rerender after toggle
+    };
 
-    tabItems.appendChild(div);
+    row.appendChild(label);
+    row.appendChild(toggle);
+    tabItems.appendChild(row);
   });
 }
+
+
 
 
 

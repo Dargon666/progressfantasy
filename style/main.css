@@ -129,3 +129,16 @@ body {
   white-space: pre-line;
 }
 
+.item-row {
+  margin-bottom: 10px;
+}
+
+.item-row button {
+  padding: 6px 10px;
+  background: #ddd;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
