@@ -7,21 +7,28 @@
 </head>
 <body>
   <h1>Progress Fantasy</h1>
+  <div id="tooltip" class="tooltip"></div>
+
 
   <div id="layout">
     <!-- Main game content with tabs -->
     <div id="main-content">
       <div id="tabs">
         <button data-tab="jobs" class="tab active">Jobs</button>
+        <button data-tab="skills" class="tab">Skills</button>
         <button data-tab="items" class="tab">Items</button> <!-- ✅ New Tab -->
         <button data-tab="settings" class="tab">Settings</button>
       </div>
 
       <div id="tab-content">
         <div id="tab-jobs" class="tab-pane active"></div>
-        <div id="tab-items" class="tab-pane"></div> <!-- ✅ New Pane -->
+        <div id="tab-skills" class="tab-pane"></div>
+        <div id="tab-items" class="tab-pane">
+            <div id="item-list"></div>
+        </div> <!-- ✅ New Pane -->
         <div id="tab-settings" class="tab-pane">
           <button id="save-button">Save Game</button>
+          <button id="reset-button">Reset Game</button>
         </div>
       </div>
     </div>

@@ -129,16 +129,131 @@ body {
   white-space: pre-line;
 }
 
-.item-row {
-  margin-bottom: 10px;
+#tab-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.item-row button {
-  padding: 6px 10px;
-  background: #ddd;
-  border: none;
-  border-radius: 4px;
+.item-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: border-color 0.2s, background 0.2s;
   cursor: pointer;
 }
 
+.item-card:hover {
+  background: #f3f3f3;
+  border-color: #999;
+}
 
+.item-toggle {
+  margin-right: 12px;
+  transform: scale(1.2);
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.item-cost {
+  font-size: 12px;
+  color: #666;
+}
+
+
+.skill-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.skill-row .xp-bar {
+  position: relative;
+  height: 24px;
+  width: 200px;
+  background: #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 12px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.skill-row .xp-bar:hover {
+  border-color: #aaa;
+}
+
+.skill-row .xp-bar.active {
+  border-color: #333;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.skill-row .xp-fill {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.1s linear;
+  z-index: 1;
+  position: relative;
+}
+
+.skill-row .job-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  line-height: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #000;
+  font-weight: bold;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.skill-row .job-info {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 9999;
+  transition: opacity 0.2s ease;
+  opacity: 0;
+}
+
+.tooltip.show {
+  opacity: 1;
+}
+
+#tab-jobs h3 {
+  margin-top: 20px;
+  font-size: 16px;
+  color: #333;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 4px;
+}

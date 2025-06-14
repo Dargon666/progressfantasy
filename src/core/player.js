@@ -1,12 +1,29 @@
+import { getJobById, getSkillById } from "../utils/dataUtils.js";
+import { getXPNeeded } from "../utils/xpUtils.js";
+import { jobs } from "../data/jobs.js";
+
 export const player = {
   gold: 0,
   xp: {},             // job XP
   levels: {},         // job levels
   skillXP: {},        // skill XP
   skillLevels: {},    // skill levels
+  baseXP: 1,
+  stats: {
+    strength: 1,
+    intelligence: 1,
+    dexterity: 1,
+    agility: 1,
+    charisma: 1,
+    wisdom: 1,
+  },
   items: {},
-  activeJob: null
+  activeJob: null,
+  activeSkill: null
 };
+
+
+
 
 export function initPlayer(jobs, skills) {
   jobs.forEach(job => {
@@ -23,7 +40,8 @@ export function initPlayer(jobs, skills) {
 export function checkSkillLevelUp(skillId) {
   const xp = player.skillXP[skillId];
   const level = player.skillLevels[skillId];
-  const xpNeeded = getXPNeeded(level);
+  const baseXP = getSkillById(skillId)?.baseXP || 1;
+  const xpNeeded = getXPNeeded(level, baseXP);
 
   if (xp >= xpNeeded) {
     player.skillLevels[skillId]++;
@@ -32,17 +50,28 @@ export function checkSkillLevelUp(skillId) {
   }
 }
 
+
 export function checkJobLevelUp(jobId) {
   const xp = player.xp[jobId];
   const level = player.levels[jobId];
-  const xpNeeded = getXPNeeded(level);
+  const job = jobs.find(j => j.id === jobId); // ⬅️ make sure you import `jobs`
+
+  const xpNeeded = getXPNeeded(level, job.baseXP);
 
   if (xp >= xpNeeded) {
     player.levels[jobId]++;
     player.xp[jobId] -= xpNeeded;
     console.log(`✨ ${jobId} leveled up! Now level ${player.levels[jobId]}`);
+
+    // 🆕 Apply stat gains
+    if (job.statGain) {
+      for (const [stat, amount] of Object.entries(job.statGain)) {
+        player.stats[stat] = (player.stats[stat] || 0) + amount;
+      }
+    }
   }
 }
+
 
 
 const SAVE_KEY = "progressFantasySave";
@@ -52,9 +81,9 @@ export function saveGame() {
   localStorage.setItem(SAVE_KEY, saveData);
 }
 
-export function loadGame(jobs) {
+export function loadGame(jobs, skills) {
   const data = localStorage.getItem(SAVE_KEY);
-  if (!data) return initPlayer(jobs);
+  if (!data) return initPlayer(jobs, skills);
 
   try {
     const parsed = JSON.parse(data);
@@ -65,15 +94,14 @@ export function loadGame(jobs) {
       if (!(job.id in player.xp)) player.xp[job.id] = 0;
       if (!(job.id in player.levels)) player.levels[job.id] = 0;
     });
+
+    // Ensure all skill keys are present (for new skills)
+    skills.forEach(skill => {
+      if (!(skill.id in player.skillXP)) player.skillXP[skill.id] = 0;
+      if (!(skill.id in player.skillLevels)) player.skillLevels[skill.id] = 0;
+    });
   } catch (e) {
     console.error("Failed to load save:", e);
-    initPlayer(jobs); // fallback
+    initPlayer(jobs, skills); // fallback
   }
-}
-
-export function getXPNeeded(level) {
-  const base = 10;        // XP required to go from level 0 to 1
-  const growth = 1.1;     // Scaling factor per level
-
-  return Math.floor(base * Math.pow(growth, level));
 }
