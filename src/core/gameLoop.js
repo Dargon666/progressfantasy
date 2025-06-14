@@ -20,12 +20,39 @@ export function gameTick() {
   // XP multipliers from utility
   let { jobMultiplier: jobXpMultiplier, skillMultiplier: skillXpMultiplier } = calculateMultipliers();
 
-  // Only calculate gold drain here
-  items.forEach(item => {
-    if (player.items[item.id]) {
-      totalDrain += item.costPerTick;
-    }
+ // Only calculate gold drain here
+items.forEach(item => {
+  if (player.items[item.id]) {
+    totalDrain += item.costPerTick;
+  }
+});
+
+const activeJob = player.activeJob ? jobs.find(j => j.id === player.activeJob) : null;
+const activeSkill = player.activeSkill ? skills.find(s => s.id === player.activeSkill) : null;
+
+if (activeJob && activeJob.costPerTick) {
+  totalDrain += activeJob.costPerTick;
+}
+
+if (activeSkill && activeSkill.costPerTick) {
+  totalDrain += activeSkill.costPerTick;
+}
+
+if (player.gold < totalDrain) {
+  console.warn("💸 Not enough gold! Pausing actions.");
+
+  // Toggle off job and skill
+  player.activeJob = null;
+  player.activeSkill = null;
+
+  // Disable all active items
+  Object.keys(player.items).forEach(id => {
+    player.items[id] = 0;
   });
+
+  return; // Stop the game tick early
+}
+
 
   // Active skill XP
  if (player.activeSkill) {
@@ -50,7 +77,8 @@ export function gameTick() {
     if (job) {
       const level = player.levels[job.id] || 1;
       player.gold += job.income * level;
-      player.xp[job.id] += player.baseXP * jobXpMultiplier;
+       const statMultiplier = getStatMultiplier(job.xpBoostFromStats || {});
+      player.xp[job.id] += player.baseXP * jobXpMultiplier *statMultiplier;
       checkJobLevelUp(job.id);
     }
   }
@@ -75,7 +103,7 @@ export function gameTick() {
     const id = skill.id;
 
     const statMultiplier = getStatMultiplier(skill.xpBoostFromStats || {});
-    const gain = player.baseXP * skillXpMultiplier;
+    const gain = player.baseXP * skillXpMultiplier * statMultiplier;
 
     checkSkillLevelUp(id);
   }

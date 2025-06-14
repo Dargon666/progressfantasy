@@ -3,9 +3,10 @@ import { jobs } from "./data/jobs.js";
 import { player, loadGame, saveGame, initPlayer} from "./core/player.js";
 import { items } from "./data/items.js";
 import { skills } from "./data/skills.js";
-import { calculateMultipliers, getXPNeeded  } from "./utils/xpUtils.js";
+import { calculateMultipliers, getXPNeeded, getStatMultiplier, calculateStatMultiplier } from "./utils/xpUtils.js";
 import { formatGold } from "./utils/format.js";
 import { getJobById, getSkillById, groupJobsByCategory } from "./utils/dataUtils.js";
+import { encodeSave, decodeSave } from "./utils/saveUtils.js";
 
 
 console.log("Main.js loaded");
@@ -55,73 +56,134 @@ function switchTab(tabName) {
 
 
 
+let selectedJobCategory = null;
+
 function renderJobs() {
   const tabJobs = document.getElementById("tab-jobs");
   tabJobs.innerHTML = "";
 
   const groupedJobs = groupJobsByCategory(jobs);
 
-  Object.entries(groupedJobs).forEach(([category, jobList]) => {
-    const header = document.createElement("h3");
-    header.textContent = category.charAt(0).toUpperCase() + category.slice(1);
-    tabJobs.appendChild(header);
+// Only keep categories with at least one unlocked job
+const unlockedGroupedJobs = {};
+for (const [category, jobList] of Object.entries(groupedJobs)) {
+  const hasUnlocked = jobList.some(job =>
+    !job.unlock || (player.levels[job.unlock.jobId] || 0) >= job.unlock.level
+  );
 
-    jobList.forEach(job => {
-      const jobLevel = player.levels[job.id] || 0;
+  if (hasUnlocked) {
+    unlockedGroupedJobs[category] = jobList;
+  }
+}
 
-      const isUnlocked =
-        !job.unlock ||
-        (player.levels[job.unlock.jobId] || 0) >= job.unlock.level;
+const categories = Object.keys(unlockedGroupedJobs);
 
-      if (isUnlocked) {
-        const bar = document.createElement("div");
-        bar.className = "xp-bar";
-        bar.id = `bar-job-${job.id}`;
 
-        bar.onclick = () => {
-          player.activeJob = player.activeJob === job.id ? null : job.id;
-        };
+  if (!selectedJobCategory || !categories.includes(selectedJobCategory)) {
+    selectedJobCategory = categories[0];
+  }
 
-        if (player.activeJob === job.id) {
-          bar.classList.add("active");
-        }
+  // Sub-tab buttons
+  const tabRow = document.createElement("div");
+  tabRow.id = "job-subtabs";
+  tabRow.style.marginBottom = "10px";
 
-        const level = player.levels[job.id] || 0;
-        const xp = player.xp[job.id] || 0;
-        const baseXP = job.baseXP || 1;
-        const xpNeeded = getXPNeeded(level, baseXP);
-        const income = job.income * Math.max(1, level);
-        const percent = Math.min((xp / xpNeeded) * 100, 100);
+  categories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "sub-tab";
+    btn.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    if (cat === selectedJobCategory) btn.classList.add("active");
 
-        bar.addEventListener("mouseenter", e => {
-          showTooltip(job.description, e.pageX, e.pageY);
-        });
-        bar.addEventListener("mousemove", e => {
-          tooltip.style.left = `${e.pageX + 12}px`;
-          tooltip.style.top = `${e.pageY + 12}px`;
-        });
-        bar.addEventListener("mouseleave", hideTooltip);
+    btn.onclick = () => {
+      selectedJobCategory = cat;
+      renderJobs(); // re-render with new selection
+    };
 
-        bar.innerHTML = `
-          <div class="xp-fill" id="fill-job-${job.id}" style="width: ${percent}%"></div>
-          <div class="job-name" id="text-job-${job.id}">
-            ${job.name} (Lvl ${level})
-          </div>
-        `;
+    tabRow.appendChild(btn);
+  });
 
-        const info = document.createElement("div");
-        info.className = "job-info";
-        info.innerHTML = `
-          +${income.toFixed(2)} Gold/tick<br>
-          ${xp.toFixed(1)} / ${xpNeeded} XP
-        `;
+  tabJobs.appendChild(tabRow);
 
-        tabJobs.appendChild(bar);
-        tabJobs.appendChild(info);
-      }
+  // Jobs in selected category
+  const jobList = groupedJobs[selectedJobCategory];
+  jobList.forEach(job => {
+    const jobLevel = player.levels[job.id] || 0;
+
+    const isUnlocked = !job.unlock || (
+  Array.isArray(job.unlock)
+    ? job.unlock.every(req => (player.levels[req.jobId] || 0) >= req.level)
+    : (player.levels[job.unlock.jobId] || 0) >= job.unlock.level
+);
+
+
+    if (!isUnlocked) return;
+
+    const bar = document.createElement("div");
+    bar.className = "xp-bar";
+    bar.id = `bar-job-${job.id}`;
+
+    bar.onclick = () => {
+      player.activeJob = player.activeJob === job.id ? null : job.id;
+    };
+
+    if (player.activeJob === job.id) {
+      bar.classList.add("active");
+    }
+
+    const level = jobLevel;
+    const xp = player.xp[job.id] || 0;
+    const baseXP = job.baseXP || 1;
+    const xpNeeded = getXPNeeded(level, baseXP);
+    const income = job.income * Math.max(1, level);
+    const percent = Math.min((xp / xpNeeded) * 100, 100);
+    const jobMultiplier = getStatMultiplier(job.xpBoostFromStats || {});
+
+    // Tooltip
+    bar.addEventListener("mouseenter", e => {
+      showTooltip(job.description || "No description.", e.pageX, e.pageY);
     });
+    bar.addEventListener("mousemove", e => {
+      tooltip.style.left = `${e.pageX + 12}px`;
+      tooltip.style.top = `${e.pageY + 12}px`;
+    });
+    bar.addEventListener("mouseleave", hideTooltip);
+
+    bar.innerHTML = `
+      <div class="xp-fill" id="fill-job-${job.id}" style="width: ${percent}%"></div>
+      <div class="job-name" id="text-job-${job.id}">
+        ${job.name} (Lvl ${level})
+      </div>
+    `;
+
+    const base = player.baseXP || 1;
+const jobStatBonus = calculateStatMultiplier(job); // optional
+const otherJobMult = jobMultiplier / jobStatBonus || 1;
+const jobXpGain = base * jobMultiplier;
+// 📌 Format stat-based XP bonuses
+let statBonusDisplay = "";
+if (job.xpBoostFromStats) {
+  const parts = [];
+  for (const stat in job.xpBoostFromStats) {
+    const boostPerPoint = job.xpBoostFromStats[stat] * 100;
+    parts.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} +${boostPerPoint.toFixed(1)}%/point`);
+  }
+  statBonusDisplay = parts.length ? `Stat Bonuses: ${parts.join(", ")}` : "";
+}
+
+const info = document.createElement("div");
+info.className = "job-info";
+info.innerHTML = `
+  ${statBonusDisplay}<br>
+  ${xp.toFixed(1)} / ${xpNeeded} XP
+`;
+
+
+
+    tabJobs.appendChild(bar);
+    tabJobs.appendChild(info);
   });
 }
+
 
 
 
@@ -140,7 +202,8 @@ function renderStats() {
   if (activeJob) {
     const job = jobs.find(j => j.id === activeJob);
     const level = player.levels[activeJob] || 1;
-    const xpPerTick = 1 * jobMultiplier;
+    const statMultiplier = getStatMultiplier(job.xpBoostFromStats || {});
+    const xpPerTick = 1 * jobMultiplier * statMultiplier;
     jobGoldPerTick = job.income * level;
 
     jobText = `
@@ -154,7 +217,8 @@ function renderStats() {
   if (activeSkill) {
     const skill = skills.find(s => s.id === activeSkill);
     const level = player.skillLevels[activeSkill] || 1;
-    const xpPerTick = 1 * skillMultiplier;
+    const statMultiplier = getStatMultiplier(skill.xpBoostFromStats || {});
+    const xpPerTick = 1 * skillMultiplier * statMultiplier;
 
     skillText = `
       ${skill.name} (Lvl ${level})<br>
@@ -271,21 +335,27 @@ function renderItems() {
 }
 
 
-//render skills
 function renderSkills() {
   const tabSkills = document.getElementById("tab-skills");
   tabSkills.innerHTML = "";
 
   skills.forEach(skill => {
-  const level = player.skillLevels[skill.id] || 0;
-  const xp = player.skillXP[skill.id] || 0;
-  const baseXP = skill.baseXP || 1;
-  const xpNeeded = getXPNeeded(level, baseXP);
-  const { jobMultiplier, skillMultiplier } = calculateMultipliers();
-  const xpPerTick = skillMultiplier * player.baseXP || 0;
-  const percent = Math.min((xp / xpNeeded) * 100, 100);
+    // ✅ Unlock check for single or multiple unlock conditions
+    const isUnlocked = !skill.unlock || (
+      Array.isArray(skill.unlock)
+        ? skill.unlock.every(req => (player.levels[req.jobId] || 0) >= req.level)
+        : (player.levels[skill.unlock.jobId] || 0) >= skill.unlock.level
+    );
 
+    if (!isUnlocked) return; // 🔒 Hide locked skills
 
+    const level = player.skillLevels[skill.id] || 0;
+    const xp = player.skillXP[skill.id] || 0;
+    const baseXP = skill.baseXP || 1;
+    const xpNeeded = getXPNeeded(level, baseXP);
+    const { jobMultiplier, skillMultiplier } = calculateMultipliers();
+    const xpPerTick = skillMultiplier * player.baseXP || 0;
+    const percent = Math.min((xp / xpNeeded) * 100, 100);
 
     const row = document.createElement("div");
     row.className = "skill-row";
@@ -302,17 +372,14 @@ function renderSkills() {
       bar.classList.add("active");
     }
 
-    // Tooltip hover handlers
+    // Tooltip hover
     bar.addEventListener("mouseenter", e => {
-      const description = skill.description; // Grab description
-      showTooltip(description, e.pageX, e.pageY);
+      showTooltip(skill.description, e.pageX, e.pageY);
     });
-
     bar.addEventListener("mousemove", e => {
       tooltip.style.left = `${e.pageX + 12}px`;
       tooltip.style.top = `${e.pageY + 12}px`;
     });
-
     bar.addEventListener("mouseleave", hideTooltip);
 
     bar.innerHTML = `
@@ -321,12 +388,26 @@ function renderSkills() {
         ${skill.name} (Lvl ${level})
       </div>
     `;
+    // 📌 Format stat-based XP bonuses
+let statBonusDisplay = "";
+if (skill.xpBoostFromStats) {
+  const parts = [];
+  for (const stat in skill.xpBoostFromStats) {
+    const boostPerPoint = skill.xpBoostFromStats[stat] * 100;
+    parts.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} +${boostPerPoint.toFixed(1)}%/point`);
+  }
+  statBonusDisplay = parts.length ? `Stat Bonuses: ${parts.join(", ")}` : "";
+}
+
 
     const info = document.createElement("div");
     info.className = "job-info";
     info.innerHTML = `
       +${xpPerTick.toFixed(2)} XP/tick<br>
       ${xp.toFixed(1)} / ${xpNeeded} XP
+  ${statBonusDisplay}<br>
+  ${xp.toFixed(1)} / ${xpNeeded} XP
+
     `;
 
     row.appendChild(bar);
@@ -334,6 +415,7 @@ function renderSkills() {
     tabSkills.appendChild(row);
   });
 }
+
 
 
 
@@ -369,3 +451,56 @@ document.getElementById("reset-button").addEventListener("click", () => {
     location.reload(); // Refresh the page to start fresh
   }
 });
+
+
+// --- Reset the game ---
+function resetGame() {
+  if (confirm("Are you sure you want to reset your progress?")) {
+    localStorage.removeItem("progressFantasySave");
+    location.reload();
+  }
+}
+
+// Export to base64 file
+function exportSave() {
+  const encoded = encodeSave(player);
+  const blob = new Blob([encoded], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "progress_fantasy_save.txt";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Import from base64 file
+function importSave(file) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const base64 = e.target.result.trim();
+      const importedData = decodeSave(base64);
+      Object.assign(player, importedData);
+      saveGame(); // save to localStorage
+      location.reload();
+    } catch (err) {
+      alert("Invalid save file. Please ensure it's a valid base64 export.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById("save-button").onclick = saveGame;
+document.getElementById("reset-button").onclick = resetGame;
+document.getElementById("export-button").onclick = exportSave;
+
+document.getElementById("import-button").onclick = () => {
+  document.getElementById("import-file").click();
+};
+document.getElementById("import-file").onchange = (e) => {
+  if (e.target.files.length > 0) {
+    importSave(e.target.files[0]);
+  }
+};
+
+

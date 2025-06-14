@@ -79,3 +79,14 @@ export function getXPNeeded(level, base) {
 
   return Math.floor(base * Math.pow(growth, level));
 }
+
+export function calculateStatMultiplier(skill) {
+  if (!skill?.xpBoostFromStats) return 1;
+  let total = 1;
+  for (const stat in skill.xpBoostFromStats) {
+    const value = player.stats?.[stat] || 0;
+    const boost = skill.xpBoostFromStats[stat];
+    total *= player.baseXP + value * boost;
+  }
+  return total;
+}

@@ -4,7 +4,8 @@ export const skills = [
   name: "Farming",
   category: "sbasic",
   description: "Increases your ability to carry heavy loads and deal physical damage.",
-  baseXP: 100,
+  baseXP: 20,
+  costPerTick: 0.0,
   xpBoost: {
     jobCategories: ["basic"],     // <-- Corrected to "jobCategories"
     jobMultiplierPerLevel: 0.05   // <-- New: scales with level
@@ -13,7 +14,9 @@ export const skills = [
     strength: 0.02,       // +2% XP per point of strength
     dexterity: 0.01       // +1% XP per point of dexterity
     },
-    unlock: { jobId: "farmer", level: 5 },  // Requires farmer level 5
+    unlock: [
+    { jobId: "farmer", level: 3 },
+  ],
     statGain: { strength: 0.5 } // ⬅️ every level gives +0.5 strength
   },
   {
@@ -21,7 +24,8 @@ export const skills = [
     name: "Mining",
     category: "sbasic",
     description: "Increases your ability to carry heavy loads and deal physical damage.",
-    baseXP: 100,
+    baseXP: 30,
+    costPerTick: 0.0,
     xpBoost: {
     jobCategories: ["basic"],     // <-- Corrected to "jobCategories"
     jobMultiplierPerLevel: 0.05   // <-- New: scales with level
@@ -30,7 +34,10 @@ export const skills = [
     strength: 0.02,       // +2% XP per point of strength
     dexterity: 0.01       // +1% XP per point of dexterity
     },
-    unlock: { jobId: "farmer", level: 5 },  // Requires farmer level 5
+    unlock: [
+    { jobId: "farmer", level: 3 },
+    { jobId: "miner", level: 7 }
+  ],
     statGain: { strength: 0.5 } // ⬅️ every level gives +0.5 strength
   }
 ];
