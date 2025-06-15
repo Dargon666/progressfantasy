@@ -1,6 +1,7 @@
 import { getJobById, getSkillById } from "../utils/dataUtils.js";
 import { getXPNeeded } from "../utils/xpUtils.js";
 import { jobs } from "../data/jobs.js";
+import { skills } from "../data/skills.js";
 
 export const player = {
   gold: 0,
@@ -42,10 +43,16 @@ export function checkSkillLevelUp(skillId) {
   const level = player.skillLevels[skillId];
   const baseXP = getSkillById(skillId)?.baseXP || 1;
   const xpNeeded = getXPNeeded(level, baseXP);
+  const skill = skills.find(s => s.id === skillId); // ⬅️ make sure you import `skills`
 
   if (xp >= xpNeeded) {
     player.skillLevels[skillId]++;
     player.skillXP[skillId] -= xpNeeded;
+    if (skill.statGain) {
+      for (const [stat, amount] of Object.entries(skill.statGain)) {
+        player.stats[stat] = (player.stats[stat] || 0) + amount;
+      }
+    }
     console.log(`🔹 ${skillId} leveled up! Now level ${player.skillLevels[skillId]}`);
   }
 }

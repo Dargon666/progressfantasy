@@ -5,7 +5,7 @@ import { items } from "./data/items.js";
 import { skills } from "./data/skills.js";
 import { calculateMultipliers, getXPNeeded, getStatMultiplier, calculateStatMultiplier } from "./utils/xpUtils.js";
 import { formatGold } from "./utils/format.js";
-import { getJobById, getSkillById, groupJobsByCategory } from "./utils/dataUtils.js";
+import { getJobById, getSkillById, groupJobsByCategory, meetsRequirements } from "./utils/dataUtils.js";
 import { encodeSave, decodeSave } from "./utils/saveUtils.js";
 
 
@@ -68,8 +68,15 @@ function renderJobs() {
 const unlockedGroupedJobs = {};
 for (const [category, jobList] of Object.entries(groupedJobs)) {
   const hasUnlocked = jobList.some(job =>
-    !job.unlock || (player.levels[job.unlock.jobId] || 0) >= job.unlock.level
+    !job.unlock || meetsRequirements(Array.isArray(job.unlock) ? job.unlock : [job.unlock], player)
   );
+
+  if (hasUnlocked) {
+    unlockedGroupedJobs[category] = jobList;
+  }
+
+
+
 
   if (hasUnlocked) {
     unlockedGroupedJobs[category] = jobList;
@@ -109,11 +116,9 @@ const categories = Object.keys(unlockedGroupedJobs);
   jobList.forEach(job => {
     const jobLevel = player.levels[job.id] || 0;
 
-    const isUnlocked = !job.unlock || (
-  Array.isArray(job.unlock)
-    ? job.unlock.every(req => (player.levels[req.jobId] || 0) >= req.level)
-    : (player.levels[job.unlock.jobId] || 0) >= job.unlock.level
-);
+const isUnlocked = !job.unlock || meetsRequirements(Array.isArray(job.unlock) ? job.unlock : [job.unlock], player);
+
+
 
 
     if (!isUnlocked) return;
@@ -335,25 +340,86 @@ function renderItems() {
 }
 
 
+let selectedSkillCategory = null;
+
+function groupSkillsByCategory(skillsList) {
+  const grouped = {};
+  skillsList.forEach(skill => {
+    if (!grouped[skill.category]) {
+      grouped[skill.category] = [];
+    }
+    grouped[skill.category].push(skill);
+  });
+  return grouped;
+}
+
 function renderSkills() {
   const tabSkills = document.getElementById("tab-skills");
   tabSkills.innerHTML = "";
 
-  skills.forEach(skill => {
-    // ✅ Unlock check for single or multiple unlock conditions
-    const isUnlocked = !skill.unlock || (
-      Array.isArray(skill.unlock)
-        ? skill.unlock.every(req => (player.levels[req.jobId] || 0) >= req.level)
-        : (player.levels[skill.unlock.jobId] || 0) >= skill.unlock.level
-    );
+  const groupedSkills = groupSkillsByCategory(skills);
 
-    if (!isUnlocked) return; // 🔒 Hide locked skills
+  // Filter to only show categories with at least one unlocked skill
+  const unlockedGroupedSkills = {};
+  for (const [category, skillList] of Object.entries(groupedSkills)) {
+   const hasUnlocked = skillList.some(skill =>
+  !skill.unlock || meetsRequirements(Array.isArray(skill.unlock) ? skill.unlock : [skill.unlock], player)
+);
+
+    if (hasUnlocked) {
+      unlockedGroupedSkills[category] = skillList;
+    }
+  }
+
+  const categories = Object.keys(unlockedGroupedSkills);
+
+// 🔒 Reset selection if invalid
+if (!categories.includes(selectedSkillCategory)) {
+  selectedSkillCategory = categories[0] || null;
+}
+
+// 🔁 Bail early if there's nothing to show
+if (!selectedSkillCategory) return;
+
+
+  if (!selectedSkillCategory || !categories.includes(selectedSkillCategory)) {
+    selectedSkillCategory = categories[0];
+  }
+
+  // Sub-tab buttons
+  const tabRow = document.createElement("div");
+  tabRow.id = "skill-subtabs";
+  tabRow.style.marginBottom = "10px";
+
+  categories.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "sub-tab";
+    btn.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    if (cat === selectedSkillCategory) btn.classList.add("active");
+
+    btn.onclick = () => {
+      selectedSkillCategory = cat;
+      renderSkills(); // re-render on tab switch
+    };
+
+    tabRow.appendChild(btn);
+  });
+
+  tabSkills.appendChild(tabRow);
+
+  // Show skills for the selected category
+const skillList = unlockedGroupedSkills[selectedSkillCategory];
+
+  skillList.forEach(skill => {
+    const isUnlocked = !skill.unlock || meetsRequirements(Array.isArray(skill.unlock) ? skill.unlock : [skill.unlock], player);
+
+    if (!isUnlocked) return;
 
     const level = player.skillLevels[skill.id] || 0;
     const xp = player.skillXP[skill.id] || 0;
     const baseXP = skill.baseXP || 1;
     const xpNeeded = getXPNeeded(level, baseXP);
-    const { jobMultiplier, skillMultiplier } = calculateMultipliers();
+    const { skillMultiplier } = calculateMultipliers();
     const xpPerTick = skillMultiplier * player.baseXP || 0;
     const percent = Math.min((xp / xpNeeded) * 100, 100);
 
@@ -372,9 +438,8 @@ function renderSkills() {
       bar.classList.add("active");
     }
 
-    // Tooltip hover
     bar.addEventListener("mouseenter", e => {
-      showTooltip(skill.description, e.pageX, e.pageY);
+      showTooltip(skill.description || "No description.", e.pageX, e.pageY);
     });
     bar.addEventListener("mousemove", e => {
       tooltip.style.left = `${e.pageX + 12}px`;
@@ -388,33 +453,44 @@ function renderSkills() {
         ${skill.name} (Lvl ${level})
       </div>
     `;
-    // 📌 Format stat-based XP bonuses
-let statBonusDisplay = "";
-if (skill.xpBoostFromStats) {
+
+    // Stat bonus display
+    let statBonusDisplay = "";
+    if (skill.xpBoostFromStats) {
+      const parts = [];
+      for (const stat in skill.xpBoostFromStats) {
+        const boostPerPoint = skill.xpBoostFromStats[stat] * 100;
+        parts.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} +${boostPerPoint.toFixed(1)}%/point`);
+      }
+      statBonusDisplay = parts.length ? `Stat Bonuses: ${parts.join(", ")}` : "";
+    }
+    let statGainDisplay = "";
+if (skill.statGain) {
   const parts = [];
-  for (const stat in skill.xpBoostFromStats) {
-    const boostPerPoint = skill.xpBoostFromStats[stat] * 100;
-    parts.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} +${boostPerPoint.toFixed(1)}%/point`);
+  for (const stat in skill.statGain) {
+    parts.push(`${stat.charAt(0).toUpperCase() + stat.slice(1)} +${skill.statGain[stat]}`);
   }
-  statBonusDisplay = parts.length ? `Stat Bonuses: ${parts.join(", ")}` : "";
+  statGainDisplay = parts.length ? `Stat Gain: ${parts.join(", ")}` : "";
 }
 
 
     const info = document.createElement("div");
     info.className = "job-info";
     info.innerHTML = `
-      +${xpPerTick.toFixed(2)} XP/tick<br>
-      ${xp.toFixed(1)} / ${xpNeeded} XP
-  ${statBonusDisplay}<br>
-  ${xp.toFixed(1)} / ${xpNeeded} XP
+  +${xpPerTick.toFixed(2)} XP/tick<br>
+  ${xp.toFixed(1)} / ${xpNeeded} XP<br>
+  ${statBonusDisplay ? `${statBonusDisplay}<br>` : ""}
+  ${statGainDisplay}
+`;
 
-    `;
 
     row.appendChild(bar);
     row.appendChild(info);
     tabSkills.appendChild(row);
   });
 }
+
+
 
 
 

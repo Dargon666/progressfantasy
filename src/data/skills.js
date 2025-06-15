@@ -1,43 +1,128 @@
 export const skills = [
   {
-  id: "farming",
-  name: "Farming",
-  category: "sbasic",
-  description: "Increases your ability to carry heavy loads and deal physical damage.",
-  baseXP: 20,
-  costPerTick: 0.0,
-  xpBoost: {
-    jobCategories: ["basic"],     // <-- Corrected to "jobCategories"
-    jobMultiplierPerLevel: 0.05   // <-- New: scales with level
-  },
+    id: "persuasion",
+    name: "Persuasion",
+    category: "Basic",
+    description: "Your ability to talk your way into better deals, more tips, or free things.",
+    baseXP: 40,
+    costPertick: 0.0,
     xpBoostFromStats: {
-    strength: 0.02,       // +2% XP per point of strength
-    dexterity: 0.01       // +1% XP per point of dexterity
+      charisma: 0.02,
+      intelligence: 0.01,
     },
-    unlock: [
-    { jobId: "farmer", level: 3 },
-  ],
-    statGain: { strength: 0.5 } // ⬅️ every level gives +0.5 strength
+    statGain: { charisma: 0.1 },
+    unlock: { jobId: "beggar", level: 2 },
   },
   {
-    id: "mining",
-    name: "Mining",
-    category: "sbasic",
-    description: "Increases your ability to carry heavy loads and deal physical damage.",
-    baseXP: 30,
-    costPerTick: 0.0,
-    xpBoost: {
-    jobCategories: ["basic"],     // <-- Corrected to "jobCategories"
-    jobMultiplierPerLevel: 0.05   // <-- New: scales with level
-    },
+    id: "test",
+    name: "test",
+    category: "test",
+    description: "Your ability to talk your way into better deals, more tips, or free things.",
+    baseXP: 40,
+    costPertick: 0.0,
     xpBoostFromStats: {
-    strength: 0.02,       // +2% XP per point of strength
-    dexterity: 0.01       // +1% XP per point of dexterity
+      charisma: 0.02,
+      intelligence: 0.01,
     },
-    unlock: [
-    { jobId: "farmer", level: 3 },
-    { jobId: "miner", level: 7 }
-  ],
-    statGain: { strength: 0.5 } // ⬅️ every level gives +0.5 strength
+    statGain: { charisma: 0.1 },
+    unlock: { jobId: "beggar", level: 2 },
+  },
+  {
+    id: "streetwise",
+    name: "Streetwise",
+    category: "Basic",
+    description: "Knowledge of how to survive, scheme, and thrive in a rough city.",
+    baseXP: 50,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      wisdom: 0.02,
+      intelligence: 0.01,
+    },
+    statGain: { wisdom: 0.1 },
+    unlock: { jobId: "courier", level: 3 },
+  },
+  {
+    id: "sleight_of_hand",
+    name: "Sleight of Hand",
+    category: "Basic",
+    description: "Manual dexterity and subtlety, perfect for theft or nimble work.",
+    baseXP: 45,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      dexterity: 0.03,
+      agility: 0.01,
+    },
+    statGain: { dexterity: 0.1 },
+    unlock: { jobId: "pickpocket", level: 1 },
+  },
+  {
+    id: "endurance",
+    name: "Endurance",
+    category: "Basic",
+    description: "How long you can exert yourself — relevant for long shifts or brawls.",
+    baseXP: 35,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      constitution: 0.02,
+      strength: 0.01,
+    },
+    statGain: { constitution: 0.1 },
+    unlock: { jobId: "courier", level: 2 },
+  },
+  {
+    id: "public_speaking",
+    name: "Public Speaking",
+    category: "Basic",
+    description: "Confidence and clarity when addressing crowds or speaking your truth.",
+    baseXP: 60,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      charisma: 0.02,
+      wisdom: 0.01,
+    },
+    statGain: { charisma: 0.1 },
+    unlock: { jobId: "street preacher", level: 1 },
+  },
+  {
+    id: "writing",
+    name: "Writing",
+    category: "Basic",
+    description: "Ability to produce legible, persuasive, or useful written material.",
+    baseXP: 50,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      intelligence: 0.03,
+      wisdom: 0.01,
+    },
+    statGain: { intelligence: 0.1 },
+    unlock: { jobId: "street scribe", level: 1 },
+  },
+  {
+    id: "brawling",
+    name: "Brawling",
+    category: "Basic",
+    description: "Unrefined, brutal hand-to-hand combat often found in street fights.",
+    baseXP: 40,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      strength: 0.02,
+      agility: 0.01,
+    },
+    statGain: { strength: 0.1 },
+    unlock: { jobId: "angry drunk", level: 1 },
+  },
+  {
+    id: "bartering",
+    name: "Bartering",
+    category: "Basic",
+    description: "Skill in negotiating better deals and selling cheap things for more.",
+    baseXP: 45,
+    costPertick: 0.0,
+    xpBoostFromStats: {
+      charisma: 0.02,
+      intelligence: 0.01,
+    },
+    statGain: { charisma: 0.1 },
+    unlock: { jobId: "peddler", level: 2 },
   }
 ];

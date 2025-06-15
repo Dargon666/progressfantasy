@@ -18,3 +18,17 @@ export function groupJobsByCategory(jobs) {
   });
   return grouped;
 }
+
+export function meetsRequirements(requirements, player) {
+  return requirements.every(req => {
+    if (req.jobId) {
+      return (player.levels[req.jobId] || 0) >= req.level;
+    } else if (req.skillId) {
+      return (player.skillLevels[req.skillId] || 0) >= req.level;
+    }
+    return true; // fallback if no ID specified
+  });
+}
+
+
+
